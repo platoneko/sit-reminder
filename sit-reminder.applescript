@@ -109,7 +109,8 @@ on keepWaitingClicked_(sender)
 end keepWaitingClicked_
 
 on makePanel(theTitle, w, h)
-    set thePanel to current application's NSPanel's alloc()'s initWithContentRect:{{0, 0}, {w, h}} styleMask:1 backing:2 defer:false
+    -- styleMask 129 = Titled | NonactivatingPanel；Regular App 的窗口只有带 NonactivatingPanel 才能进入其他 App 的全屏 Space
+    set thePanel to current application's NSPanel's alloc()'s initWithContentRect:{{0, 0}, {w, h}} styleMask:129 backing:2 defer:false
     thePanel's setTitle:theTitle
     thePanel's setFloatingPanel:true
     thePanel's setBecomesKeyOnlyIfNeeded:false
@@ -122,10 +123,27 @@ on presentPanel(thePanel)
     set activePanel to thePanel
     thePanel's setLevel:25
     thePanel's setCollectionBehavior:273
-    thePanel's |center|()
+    my centerOnMouseScreen(thePanel)
     thePanel's makeKeyAndOrderFront:(missing value)
     thePanel's |orderFrontRegardless|()
 end presentPanel
+
+-- 窗口只会加入它所在显示器的 Space，所以放到鼠标所在的屏幕上
+on centerOnMouseScreen(thePanel)
+    set mouseLoc to current application's NSEvent's mouseLocation()
+    set mouseX to mouseLoc's x
+    set mouseY to mouseLoc's y
+    repeat with theScreen in (current application's NSScreen's screens() as list)
+        set {{fx, fy}, {fw, fh}} to theScreen's frame()
+        if mouseX ≥ fx and mouseX ≤ fx + fw and mouseY ≥ fy and mouseY ≤ fy + fh then
+            set {{vx, vy}, {vw, vh}} to theScreen's visibleFrame()
+            set {{px, py}, {pw, ph}} to thePanel's frame()
+            thePanel's setFrameOrigin:{vx + (vw - pw) / 2, vy + (vh - ph) / 2}
+            return
+        end if
+    end repeat
+    thePanel's |center|()
+end centerOnMouseScreen
 
 on dismissPanel()
     if activePanel is missing value then return
